@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -6,7 +7,9 @@ import toml
 from chromadb import PersistentClient, Collection
 from chromadb.utils import embedding_functions
 
-from text_extraction import load_document
+from src.text_extraction import load_file
+
+logger = logging.getLogger(__name__)
 
 CONFIG = toml.load("config.toml")
 
@@ -47,7 +50,7 @@ def add_file(collection: Collection, file_path: Path) -> None:
         file_path (Path): path to the file to add
     """
 
-    chunks = load_document(file_path)
+    chunks = load_file(file_path)
     documents = []
     metadata = []
     ids = []
@@ -62,3 +65,36 @@ def add_file(collection: Collection, file_path: Path) -> None:
         metadatas=metadata,
         ids=ids,
     )
+
+
+def update_sources(collection: Collection, source_dir: Path) -> None:
+    """
+    Update the database collection with all files in the specified directory.
+
+    Args:
+        collection (Collection): the collection to update
+        source_dir (Path): path to the directory containing files to add
+    """
+    for file_path in source_dir.glob("*.pdf"):
+        results = collection.get(
+            where={"source": str(file_path)},
+            include=["metadatas"],
+        )
+        if results["ids"]:
+            logger.info(f"File {file_path} already exists in the database.")
+            continue
+        else:
+            try:
+                add_file(collection, file_path)
+                logger.info(f"Added file: {file_path}")
+                logger.info(results)
+            except NotImplementedError as e:
+                logger.error(
+                    f"Failed to add file: {file_path} because it was not a pdf file."
+                )
+                continue
+            except Exception as e:
+                logger.error(
+                    f"Failed to add file: {file_path} due to an unexpected error. Error: {e}"
+                )
+                continue

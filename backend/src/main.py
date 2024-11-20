@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.encoders import jsonable_encoder
 
-from src.chroma_database import init_db
+from src.chroma_database import init_db, update_sources
 
 
 logger = logging.getLogger(__name__)
@@ -40,9 +40,10 @@ async def lifespan(app: FastAPI):
     global COLLECTION
     COLLECTION = init_db(
         path=CONFIG["CHROMADB_PATH"],
-        collection=CONFIG["COLLECTION_NAME"],
+        collection_name=CONFIG["COLLECTION_NAME"],
     )
     logger.info(f"Initialized database collection: {COLLECTION.name}")
+    update_sources(collection=COLLECTION, source_dir=Path(CONFIG["SOURCE_DIR"]))
     yield
     # Shutdown events
     pass

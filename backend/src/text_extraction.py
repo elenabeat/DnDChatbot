@@ -10,7 +10,7 @@ from langchain_core.documents.base import Document
 CONFIG = toml.load("config.toml")
 
 
-def load_document(file_path: Path) -> List[Document]:
+def load_file(file_path: Path) -> List[Document]:
     """
     Extract and chunk text from pdf file at the given path.
 
