@@ -1,0 +1,26 @@
+version: '3.11'
+
+services:
+  backend:
+    build:
+      context: backend
+    environment:
+      - WIDTH=800
+      - HEIGHT=480
+    image: chatbot-backend:latest
+    volumes:
+      - ./sources:/app/sources
+      - ./logs:/app/logs
+    ports:
+      - "5050:5050"
+  frontend:
+    build:
+      context: frontend
+    image: vsmp-frontend:latest
+    volumes:
+      - ./logs:/app/logs
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+    network_mode: "host"
