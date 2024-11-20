@@ -1,12 +1,7 @@
-version: '3.11'
-
 services:
   backend:
     build:
       context: backend
-    environment:
-      - WIDTH=800
-      - HEIGHT=480
     image: chatbot-backend:latest
     volumes:
       - ./sources:/app/sources
@@ -16,7 +11,7 @@ services:
   frontend:
     build:
       context: frontend
-    image: vsmp-frontend:latest
+    image: chatbot-frontend:latest
     volumes:
       - ./logs:/app/logs
     ports:
