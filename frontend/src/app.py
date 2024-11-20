@@ -20,7 +20,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     st.set_page_config(
-        page_title="DnD Chatbot",
+        page_title="Rules with Advantage",
         page_icon="🎲",
         layout="wide",
         initial_sidebar_state="auto",

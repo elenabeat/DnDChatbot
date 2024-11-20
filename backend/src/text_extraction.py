@@ -9,6 +9,7 @@ from langchain_core.documents.base import Document
 
 CONFIG = toml.load("config.toml")
 
+
 def load_document(file_path: Path) -> List[Document]:
     """
     Extract and chunk text from pdf file at the given path.
@@ -37,5 +38,3 @@ def load_document(file_path: Path) -> List[Document]:
         return pages
     else:
         raise NotImplementedError(f"File type not supported: {file_path}")
-
-
