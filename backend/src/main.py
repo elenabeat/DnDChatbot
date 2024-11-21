@@ -1,12 +1,16 @@
 import logging
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Union
 
+import toml
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.encoders import jsonable_encoder
+
+from src.chroma_database import init_db, update_sources
 
 
 logger = logging.getLogger(__name__)
@@ -17,11 +21,51 @@ logging.basicConfig(
     filemode="w",
 )
 
+CONFIG = toml.load("config.toml")
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Controls startup and shutdown events for the FastAPI application.
+    Anything before the yield statement is executed on startup,
+    and anything after is executed on shutdown.
+
+    Args:
+        app (FastAPI): unaccessed here but necessary for FASTAPI to accept this
+            lifespan.
+    """
+    # Startup events
+    load_dotenv()
+    global COLLECTION
+    COLLECTION = init_db(
+        path=CONFIG["CHROMADB_PATH"],
+        collection_name=CONFIG["COLLECTION_NAME"],
+    )
+    logger.info(f"Initialized database collection: {COLLECTION.name}")
+    update_sources(collection=COLLECTION, source_dir=Path(CONFIG["SOURCE_DIR"]))
+    yield
+    # Shutdown events
+    pass
+
+
+app = FastAPI(lifespan=lifespan)
+
 
 @app.exception_handler(RequestValidationError)
-async def custom_form_validation_error(request: Request, exc: RequestValidationError):
+async def custom_form_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """
+    Sends formats detailed responses for any requests that trigger validation errors.
+
+    Args:
+        request (Request): request triggering the validation error.
+        exc (RequestValidationError): the validation error exception that was raised.
+
+    Returns:
+        JSONResponse: json response explaining what fields were missing, of the wrong 
+            type, etc.
+    """
+
     reformatted_message = defaultdict(list)
     for pydantic_error in exc.errors():
         loc, msg = pydantic_error["loc"], pydantic_error["msg"]
@@ -35,14 +79,3 @@ async def custom_form_validation_error(request: Request, exc: RequestValidationE
             {"detail": "Invalid request", "errors": reformatted_message}
         ),
     )
-
-
-@app.get("/list-videos")
-def list_videos() -> str:
-    """
-    List all mp4 files in the videos directory.
-
-    Returns:
-        VideoList: A list of video file paths.
-    """
-    return "this is a test"

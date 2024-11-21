@@ -6,6 +6,7 @@ services:
     volumes:
       - ./sources:/app/sources
       - ./logs:/app/logs
+      - ./database:/app/database
     ports:
       - "5050:5050"
   frontend:
