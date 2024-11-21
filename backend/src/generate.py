@@ -33,7 +33,7 @@ class OpenAIGenerator:
             messages=messages,
         )
 
-        return resp.choices[0].message["content"]
+        return resp.choices[0].message.content
 
     def generate_search_query(self, query: str, chat_history: str) -> str:
         """

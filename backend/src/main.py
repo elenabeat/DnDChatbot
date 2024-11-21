@@ -100,12 +100,14 @@ def chat_response(chat_query: ChatQuery) -> ChatResponse:
     search_query = GENERATOR.generate_search_query(
         query=chat_query.query, chat_history=chat_query.chat_history
     )
+    logger.info(f"Search Query: {search_query}")
 
     context = COLLECTION.query(
         query_texts=[search_query],
         n_results=CONFIG["TOP_K"],
     )
-    context_str = "\n\n".join(context["documents"])
+    logger.info(f"Context: {context}")
+    context_str = "\n\n".join(context["documents"][0])
 
     response = GENERATOR.generate_chat_response(
         query=chat_query.query,
@@ -113,4 +115,10 @@ def chat_response(chat_query: ChatQuery) -> ChatResponse:
         context=context_str,
     )
 
-    return ChatResponse(response=response, context=context)
+    return ChatResponse(
+        response=response,
+        context={
+            "documents": context["documents"][0],
+            "metadata": context["metadatas"][0],
+        },
+    )
