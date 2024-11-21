@@ -75,7 +75,7 @@ def update_sources(collection: Collection, source_dir: Path) -> None:
         collection (Collection): the collection to update
         source_dir (Path): path to the directory containing files to add
     """
-    for file_path in source_dir.glob("*.pdf"):
+    for file_path in source_dir.rglob("*.pdf"):
         results = collection.get(
             where={"source": str(file_path)},
             include=["metadatas"],
@@ -87,7 +87,6 @@ def update_sources(collection: Collection, source_dir: Path) -> None:
             try:
                 add_file(collection, file_path)
                 logger.info(f"Added file: {file_path}")
-                logger.info(results)
             except NotImplementedError as e:
                 logger.error(
                     f"Failed to add file: {file_path} because it was not a pdf file."
@@ -95,6 +94,7 @@ def update_sources(collection: Collection, source_dir: Path) -> None:
                 continue
             except Exception as e:
                 logger.error(
-                    f"Failed to add file: {file_path} due to an unexpected error. Error: {e}"
+                    f"Failed to add file: {file_path} due to an unexpected error. Error: {e}",
+                    exc_info=True,
                 )
                 continue
