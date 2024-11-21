@@ -2,7 +2,6 @@ import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Union
 
 import toml
 from dotenv import load_dotenv
@@ -33,7 +32,8 @@ async def lifespan(app: FastAPI):
     and anything after is executed on shutdown.
 
     Args:
-        app (FastAPI): _description_
+        app (FastAPI): unaccessed here but necessary for FASTAPI to accept this
+            lifespan.
     """
     # Startup events
     load_dotenv()
@@ -53,7 +53,19 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.exception_handler(RequestValidationError)
-async def custom_form_validation_error(request: Request, exc: RequestValidationError):
+async def custom_form_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """
+    Sends formats detailed responses for any requests that trigger validation errors.
+
+    Args:
+        request (Request): request triggering the validation error.
+        exc (RequestValidationError): the validation error exception that was raised.
+
+    Returns:
+        JSONResponse: json response explaining what fields were missing, of the wrong 
+            type, etc.
+    """
+
     reformatted_message = defaultdict(list)
     for pydantic_error in exc.errors():
         loc, msg = pydantic_error["loc"], pydantic_error["msg"]
@@ -67,14 +79,3 @@ async def custom_form_validation_error(request: Request, exc: RequestValidationE
             {"detail": "Invalid request", "errors": reformatted_message}
         ),
     )
-
-
-@app.get("/list-videos")
-def list_videos() -> str:
-    """
-    List all mp4 files in the videos directory.
-
-    Returns:
-        VideoList: A list of video file paths.
-    """
-    return "this is a test"
