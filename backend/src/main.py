@@ -11,7 +11,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.encoders import jsonable_encoder
 
 from src.chroma_database import init_db, update_sources
-
+from src.generate import OpenAIGenerator
+from src.api_dataclasses import ChatQuery, ChatResponse
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -42,6 +43,8 @@ async def lifespan(app: FastAPI):
         path=CONFIG["CHROMADB_PATH"],
         collection_name=CONFIG["COLLECTION_NAME"],
     )
+    global GENERATOR
+    GENERATOR = OpenAIGenerator()
     logger.info(f"Initialized database collection: {COLLECTION.name}")
     update_sources(collection=COLLECTION, source_dir=Path(CONFIG["SOURCE_DIR"]))
     yield
@@ -53,7 +56,9 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.exception_handler(RequestValidationError)
-async def custom_form_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def custom_form_validation_error(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     """
     Sends formats detailed responses for any requests that trigger validation errors.
 
@@ -62,7 +67,7 @@ async def custom_form_validation_error(request: Request, exc: RequestValidationE
         exc (RequestValidationError): the validation error exception that was raised.
 
     Returns:
-        JSONResponse: json response explaining what fields were missing, of the wrong 
+        JSONResponse: json response explaining what fields were missing, of the wrong
             type, etc.
     """
 
@@ -79,3 +84,33 @@ async def custom_form_validation_error(request: Request, exc: RequestValidationE
             {"detail": "Invalid request", "errors": reformatted_message}
         ),
     )
+
+
+@app.post("/chat_response")
+def chat_response(chat_query: ChatQuery) -> ChatResponse:
+    """
+    Generate a response to a chat query.
+
+    Args:
+        chat_query (ChatQuery): the query to respond to
+
+    Returns:
+        str: the response to the query
+    """
+    search_query = GENERATOR.generate_search_query(
+        query=chat_query.query, chat_history=chat_query.chat_history
+    )
+
+    context = COLLECTION.query(
+        query_texts=[search_query],
+        n_results=CONFIG["TOP_K"],
+    )
+    context_str = "\n\n".join(context["documents"])
+
+    response = GENERATOR.generate_chat_response(
+        query=chat_query.query,
+        chat_history=chat_query.chat_history,
+        context=context_str,
+    )
+
+    return ChatResponse(response=response, context=context)
